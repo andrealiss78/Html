@@ -1,0 +1,87 @@
+<doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lenguaje de Señas con Avatar</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        video { width: 100%; max-width: 400px; }
+        #avatar { width: 200px; margin: auto; }
+    </style>
+</head>
+<body>
+
+    <h2>Lenguaje de Señas con Avatar</h2>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <p id="texto">Haz un gesto con la mano</p>
+    <div id="avatar"></div>
+
+    <script>
+        // Configurar cámara
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const textoElemento = document.getElementById('texto');
+
+        // Cargar MediaPipe Hands
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+
+        hands.onResults((results) => {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            if (results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                let gesture = reconocerGesto(landmarks);
+                textoElemento.innerText = gesture;
+                hablar(gesture);
+            }
+        });
+
+        // Iniciar cámara
+        const camera = new Camera(videoElement, {
+            onFrame: async () => await hands.send({image: videoElement}),
+            width: 480,
+            height: 360
+        });
+        camera.start();
+
+        // Función para reconocer un gesto básico
+        function reconocerGesto(landmarks) {
+            const yPulgar = landmarks[4].y;
+            const yIndice = landmarks[8].y;
+            if (yPulgar < yIndice) return "Hola";
+            return "No reconocido";
+        }
+
+        // Función para hablar
+        function hablar(texto) {
+            let synth = window.speechSynthesis;
+            let utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = "es-ES";
+            synth.speak(utterance);
+        }
+
+        // Cargar avatar animado
+        let avatar = lottie.loadAnimation({
+            container: document.getElementById('avatar'),
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            path: 'https://assets3.lottiefiles.com/packages/lf20_u4yrau.json'
+        });
+
+    </script>
+
+</body>
+</html>
